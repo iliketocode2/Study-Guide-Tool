@@ -1,123 +1,122 @@
+'use client';
+
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
+import { toast } from 'sonner';
+import { FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useToast } from '@/components/ui/use-toast';
-import { useStudyStore } from '@/lib/store';
 import LoadingSpinner from './loading-spinner';
 
 export default function PdfUploader() {
-  const [files, setFiles] = useState([]);
-  const { isLoading, setLoading, setError, addMaterial } = useStudyStore();
-  const { toast } = useToast();
+  const router = useRouter();
+  const [files, setFiles] = useState<File[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const pdfFiles = acceptedFiles.filter(
-      file => file.type === 'application/pdf'
+      (file) => file.type === 'application/pdf'
     );
-    
+
     if (pdfFiles.length !== acceptedFiles.length) {
-      toast({
-        title: "Invalid file type",
-        description: "Only PDF files are accepted",
-        variant: "destructive"
-      });
+      toast.error('Only PDF files are accepted');
     }
-    
+
     setFiles(pdfFiles);
-  }, [toast]);
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf']
+      'application/pdf': ['.pdf'],
     },
-    maxFiles: 1
+    maxFiles: 1,
+    disabled: isLoading,
   });
 
   const handleUpload = async () => {
     if (files.length === 0) return;
-    
-    setLoading(true);
-    setError(null);
-    
+
+    setIsLoading(true);
+
     const formData = new FormData();
     formData.append('pdf', files[0]);
-    
+
     try {
-      const uploadResponse = await fetch('/api/upload', {
+      const response = await fetch('/api/sets', {
         method: 'POST',
         body: formData,
       });
-      
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload PDF');
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate study materials');
       }
-      
-      const { fileId, fileName } = await uploadResponse.json();
-      
-      // Generate study materials
-      const generateResponse = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ fileId, fileName }),
-      });
-      
-      if (!generateResponse.ok) {
-        throw new Error('Failed to generate study materials');
-      }
-      
-      const studyMaterials = await generateResponse.json();
-      addMaterial(studyMaterials);
-      
-      toast({
-        title: "Success!",
-        description: "Your study materials are ready.",
-      });
-      
-      // Clear uploaded files
+
+      toast.success('Study materials ready');
       setFiles([]);
+      router.push(`/sets/${data.id}`);
     } catch (error) {
       console.error(error);
-      setError(error instanceof Error ? error.message : 'An unknown error occurred');
-      
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-        variant: "destructive"
-      });
+      toast.error(
+        error instanceof Error ? error.message : 'An unknown error occurred'
+      );
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
     <Card>
-      <CardContent>
+      <CardContent className="space-y-4 p-6">
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${
-            isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
-          }`}
+          className={`cursor-pointer rounded-lg border-2 border-dashed p-10 text-center transition-colors ${
+            isDragActive
+              ? 'border-primary bg-primary/5'
+              : 'border-muted-foreground/25 hover:border-muted-foreground/40'
+          } ${isLoading ? 'pointer-events-none opacity-60' : ''}`}
         >
           <input {...getInputProps()} />
+          <FileUp className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
           {files.length > 0 ? (
-            <p>{files[0].name}</p>
+            <p className="font-medium">{files[0].name}</p>
           ) : (
-            <p>Drag & drop your PDF here, or click to browse</p>
+            <div className="space-y-1">
+              <p className="font-medium">Drag & drop your PDF here</p>
+              <p className="text-sm text-muted-foreground">
+                or click to browse (max 10MB)
+              </p>
+            </div>
           )}
         </div>
+
         {files.length > 0 && (
-          <Button onClick={handleUpload} disabled={isLoading} className="mt-4 w-full">
-            {isLoading ? <LoadingSpinner /> : 'Generate Study Materials'}
+          <Button
+            onClick={handleUpload}
+            disabled={isLoading}
+            className="w-full"
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <LoadingSpinner size="sm" />
+                Generating…
+              </span>
+            ) : (
+              'Generate study materials'
+            )}
           </Button>
         )}
+
         {isLoading && (
           <Alert>
-            <AlertDescription>Analyzing your PDF and generating study materials...</AlertDescription>
+            <AlertDescription>
+              Extracting text and generating flashcards and quiz questions.
+              This can take a little while.
+            </AlertDescription>
           </Alert>
         )}
       </CardContent>

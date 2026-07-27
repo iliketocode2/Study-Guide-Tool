@@ -1,41 +1,19 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import PdfUploader from '@/components/pdf-uploader';
-import StudyTabs from '@/components/study-tabs';
-import { Toaster } from '@/components/ui/toaster';
-import { useStudyStore } from '@/lib/store';
 
 export default function Home() {
-  const { materials } = useStudyStore();
-  const [mounted, setMounted] = useState(false);
-  
-  // Prevent hydration errors
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  
-  if (!mounted) return null;
-  
   return (
-    
-      
-        PDF Study Assistant
-        
-          Upload your study documents and let AI generate flashcards and practice questions to help you study efficiently.
-        
-      
-      
-      {materials.length === 0 ? (
-        
-      ) : (
-        
-          
-          
-        
-      )}
-      
-      
-    
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Turn a PDF into study materials
+        </h1>
+        <p className="text-muted-foreground">
+          Upload a study document and AI will generate flashcards and practice
+          questions. Everything is saved to the shared library so you can come
+          back anytime.
+        </p>
+      </div>
+      <PdfUploader />
+    </div>
   );
 }

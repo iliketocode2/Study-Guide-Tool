@@ -1,58 +1,35 @@
+'use client';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FlashcardViewer from './flashcard-viewer';
 import QuizViewer from './quiz-viewer';
-import { useStudyStore } from '@/lib/store';
-import { Avatar } from '@/components/ui/avatar';
+import type { Flashcard, QuizQuestion } from '@/types';
 
-export default function StudyTabs() {
-  const { currentMaterial, materials, setCurrentMaterial } = useStudyStore();
-  
-  if (!materials.length) return null;
-  
+interface StudyTabsProps {
+  flashcards: Flashcard[];
+  quizQuestions: QuizQuestion[];
+}
+
+export default function StudyTabs({
+  flashcards,
+  quizQuestions,
+}: StudyTabsProps) {
   return (
-    
-      {materials.length > 1 && (
-        
-          {materials.map((material) => (
-            <button
-              key={material.id}
-              className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm ${
-                currentMaterial?.id === material.id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80'
-              }`}
-              onClick={() => setCurrentMaterial(material.id)}
-            >
-              
-                
-                  
-                  
-                
-              
-              {material.fileName}
-            
-          ))}
-        
-      )}
-      
-      {currentMaterial && (
-        
-          
-            
-              Flashcards
-              Quiz Questions
-            
-          
-          
-          
-            
-          
-          
-          
-            
-          
-        
-      )}
-    
+    <Tabs defaultValue="flashcards" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="flashcards">
+          Flashcards ({flashcards.length})
+        </TabsTrigger>
+        <TabsTrigger value="quiz">
+          Quiz ({quizQuestions.length})
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="flashcards" className="mt-6">
+        <FlashcardViewer flashcards={flashcards} />
+      </TabsContent>
+      <TabsContent value="quiz" className="mt-6">
+        <QuizViewer questions={quizQuestions} />
+      </TabsContent>
+    </Tabs>
   );
 }
